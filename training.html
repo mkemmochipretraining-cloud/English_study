@@ -107,6 +107,25 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .streak-dot{width:100%;height:24px;border-radius:4px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:var(--text-dim)}
 .streak-dot.done{background:var(--green);color:#fff}
 .streak-dot.today{border:2px solid var(--accent)}
+
+.grade-result{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:10px;margin-bottom:10px}
+.grade-result h4{font-size:0.9rem;font-weight:700;margin-bottom:10px;color:var(--accent)}
+.grade-score{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.grade-score .score-num{font-size:2rem;font-weight:800;line-height:1}
+.grade-score .score-label{font-size:0.75rem;color:var(--text-dim)}
+.grade-section{margin-bottom:10px}
+.grade-section-title{font-size:0.8rem;font-weight:600;color:var(--orange);margin-bottom:4px}
+.grade-section p,.grade-section li{font-size:0.85rem;line-height:1.6;color:var(--text)}
+.grade-section ul{padding-left:16px;margin:0}
+.grade-section li{margin-bottom:4px}
+.grade-section code{background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green);font-size:0.82rem}
+.grade-correction{background:var(--bg);border-left:3px solid var(--green);padding:8px 12px;border-radius:0 8px 8px 0;margin:6px 0;font-size:0.85rem;line-height:1.6}
+.grade-correction .original{color:var(--red);text-decoration:line-through}
+.grade-correction .corrected{color:var(--green)}
+.grade-loading{text-align:center;padding:20px;color:var(--text-dim);font-size:0.85rem}
+.grade-loading .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-grade{background:var(--purple);color:#fff}
 </style>
 </head>
 <body>
@@ -114,6 +133,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
   <div class="header">
     <h1><b>English</b> Training</h1>
     <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" onclick="showApiKeyModal()">API Key</button>
       <button class="btn btn-ghost btn-sm" onclick="exportData()">Export</button>
       <button class="btn btn-ghost btn-sm" onclick="importData()">Import</button>
     </div>
@@ -149,7 +169,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
       <textarea id="grammar-input" rows="6" placeholder="Write your sentences here...&#10;&#10;1. &#10;2. &#10;3. &#10;4. &#10;5. "></textarea>
       <div class="char-count" id="grammar-count">0</div>
     </div>
-    <button class="btn btn-g btn-full" onclick="saveGrammar()">Save & Complete</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-g" style="flex:1" onclick="saveGrammar()">Save</button>
+      <button class="btn btn-grade" style="flex:1" onclick="saveAndGradeGrammar()">Save & Grade</button>
+    </div>
+    <div id="grammar-grade-result"></div>
   </div>
 
   <!-- WRITING -->
@@ -168,8 +192,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-g" style="flex:1" onclick="saveWriting()">Save</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="closeWriting()">Cancel</button>
+        <button class="btn btn-grade" style="flex:1" onclick="saveAndGradeWriting()">Save & Grade</button>
+        <button class="btn btn-ghost" style="flex:0.6" onclick="closeWriting()">Cancel</button>
       </div>
+      <div id="writing-grade-result"></div>
     </div>
   </div>
 
@@ -199,6 +225,21 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
       </select>
     </div>
     <div class="card"><div id="log-list"></div></div>
+  </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal-bg" id="apikey-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Claude API Key Settings</h3>
+    <label>API Key (sk-ant-...)</label>
+    <input type="password" id="apikey-input" placeholder="sk-ant-api03-...">
+    <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:12px">API Key is stored locally in your browser only. It is sent directly to Anthropic's API and nowhere else.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" style="flex:1" onclick="saveApiKey()">Save</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('apikey-modal').classList.remove('show')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -597,8 +638,10 @@ function renderLog() {
         ${e.date} — ${e.type === 'grammar' ? e.topic : e.scenario || ''}
         <span class="tag ${e.type === 'grammar' ? 'tag-grammar' : 'tag-biz'}" style="float:right">${e.type}</span>
         <button class="btn btn-d btn-sm" style="float:right;padding:1px 6px;font-size:0.6rem;margin-right:4px" onclick="deleteEntry('${e.id}')">Del</button>
+        <button class="btn btn-grade btn-sm" style="float:right;padding:1px 6px;font-size:0.6rem;margin-right:4px" onclick="gradeEntry('${e.id}')">Grade</button>
       </div>
       <div class="entry-text">${escHtml(e.text).replace(/\n/g, '<br>')}</div>
+      <div id="grade-${e.id}"></div>
     </div>
   `).join('');
 }
@@ -629,6 +672,189 @@ function importData() {
     if (d.grammarIdx != null) { currentGrammarIdx = d.grammarIdx; save('grammarIdx', currentGrammarIdx); }
     renderToday();
   } catch { alert('Invalid file'); } }; r.readAsText(e.target.files[0]); }; input.click();
+}
+
+// --- API KEY ---
+function showApiKeyModal() {
+  document.getElementById('apikey-input').value = load('apiKey', '');
+  document.getElementById('apikey-modal').classList.add('show');
+}
+function saveApiKey() {
+  const key = document.getElementById('apikey-input').value.trim();
+  save('apiKey', key);
+  document.getElementById('apikey-modal').classList.remove('show');
+  alert(key ? 'API Key saved.' : 'API Key cleared.');
+}
+
+// --- AUTO GRADING ---
+async function callClaude(systemPrompt, userMessage) {
+  const apiKey = load('apiKey', '');
+  if (!apiKey) { alert('API Key が設定されていません。ヘッダーの「API Key」ボタンから設定してください。'); return null; }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API Error (${res.status}): ${err}`);
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+function renderGradeResult(containerId, resultJson) {
+  const el = document.getElementById(containerId);
+  try {
+    const r = JSON.parse(resultJson);
+    let html = `<div class="grade-result"><h4>Grading Result</h4>`;
+    html += `<div class="grade-score">
+      <div class="score-num" style="color:${r.score >= 80 ? 'var(--green)' : r.score >= 60 ? 'var(--orange)' : 'var(--red)'}">${r.score}</div>
+      <div><div style="font-size:0.9rem;font-weight:600">/100</div><div class="score-label">${r.level || ''}</div></div>
+    </div>`;
+
+    if (r.corrections && r.corrections.length) {
+      html += `<div class="grade-section"><div class="grade-section-title">Corrections</div>`;
+      r.corrections.forEach(c => {
+        html += `<div class="grade-correction">
+          <span class="original">${escHtml(c.original)}</span> → <span class="corrected">${escHtml(c.corrected)}</span>
+          <div style="font-size:0.78rem;color:var(--text-dim);margin-top:2px">${escHtml(c.explanation)}</div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if (r.good_points && r.good_points.length) {
+      html += `<div class="grade-section"><div class="grade-section-title" style="color:var(--green)">Good Points</div><ul>`;
+      r.good_points.forEach(p => { html += `<li>${escHtml(p)}</li>`; });
+      html += `</ul></div>`;
+    }
+
+    if (r.improvements && r.improvements.length) {
+      html += `<div class="grade-section"><div class="grade-section-title">Tips for Improvement</div><ul>`;
+      r.improvements.forEach(p => { html += `<li>${escHtml(p)}</li>`; });
+      html += `</ul></div>`;
+    }
+
+    if (r.rewrite) {
+      html += `<div class="grade-section"><div class="grade-section-title" style="color:var(--accent)">Model Answer</div>
+        <div class="grade-correction" style="border-left-color:var(--accent)">${escHtml(r.rewrite)}</div></div>`;
+    }
+
+    html += `</div>`;
+    el.innerHTML = html;
+  } catch {
+    el.innerHTML = `<div class="grade-result"><h4>Grading Result</h4><div style="font-size:0.85rem;line-height:1.6;white-space:pre-wrap">${escHtml(resultJson)}</div></div>`;
+  }
+}
+
+function showLoading(containerId) {
+  document.getElementById(containerId).innerHTML = `<div class="grade-loading"><span class="spinner"></span>Grading with Claude AI...</div>`;
+}
+
+const GRAMMAR_GRADE_SYSTEM = `You are an English teacher grading a Japanese engineer's grammar writing practice.
+The student was given a grammar topic and asked to write 5 sentences using that grammar pattern.
+Grade the writing and return ONLY a JSON object (no markdown, no code fences) with this structure:
+{
+  "score": <0-100>,
+  "level": "<brief level label like 'Good', 'Needs Work', 'Excellent'>",
+  "corrections": [{"original": "<wrong sentence or phrase>", "corrected": "<fixed version>", "explanation": "<brief explanation in Japanese>"}],
+  "good_points": ["<what they did well, in Japanese>"],
+  "improvements": ["<specific tips, in Japanese>"],
+  "rewrite": "<optional: a model answer paragraph using the same grammar topic, 3-5 sentences>"
+}
+Scoring guide: Grammar accuracy 40pts, Target grammar usage 30pts, Vocabulary/naturalness 20pts, Completeness 10pts.
+Be encouraging but honest. Give specific corrections. Respond in JSON only.`;
+
+const WRITING_GRADE_SYSTEM = `You are an English teacher grading a Japanese engineer's business English writing.
+The student was given a scenario/prompt and asked to write a response in English.
+Grade the writing and return ONLY a JSON object (no markdown, no code fences) with this structure:
+{
+  "score": <0-100>,
+  "level": "<brief level label>",
+  "corrections": [{"original": "<wrong phrase>", "corrected": "<fixed version>", "explanation": "<brief explanation in Japanese>"}],
+  "good_points": ["<what they did well, in Japanese>"],
+  "improvements": ["<specific tips, in Japanese>"],
+  "rewrite": "<a model answer for the same scenario, showing natural business English>"
+}
+Scoring guide: Grammar 25pts, Vocabulary/Expressions 25pts, Task completion 25pts, Tone/Professionalism 25pts.
+Be encouraging but honest. Respond in JSON only.`;
+
+async function saveAndGradeGrammar() {
+  const text = document.getElementById('grammar-input').value.trim();
+  if (!text) return;
+  const t = GRAMMAR_TOPICS[currentGrammarIdx];
+
+  // Save first
+  entries.push({id: Date.now().toString(36), date: today(), type: 'grammar', topic: t.title, text});
+  save('entries', entries);
+
+  // Grade
+  showLoading('grammar-grade-result');
+  try {
+    const userMsg = `Grammar Topic: ${t.title}\nDescription: ${t.desc}\n\nStudent's writing:\n${text}`;
+    const result = await callClaude(GRAMMAR_GRADE_SYSTEM, userMsg);
+    if (result) renderGradeResult('grammar-grade-result', result);
+  } catch (e) {
+    document.getElementById('grammar-grade-result').innerHTML = `<div class="grade-result" style="border-color:var(--red)"><p style="color:var(--red);font-size:0.85rem">Error: ${escHtml(e.message)}</p></div>`;
+  }
+}
+
+async function saveAndGradeWriting() {
+  const text = document.getElementById('writing-input').value.trim();
+  if (!text || !currentScenario) return;
+
+  // Save first
+  entries.push({id: Date.now().toString(36), date: today(), type: 'business', scenario: currentScenario.title, cat: currentScenario.cat, text});
+  save('entries', entries);
+
+  // Grade
+  showLoading('writing-grade-result');
+  try {
+    const userMsg = `Scenario: ${currentScenario.cat} — ${currentScenario.title}\nPrompt: ${currentScenario.prompt}\n\nStudent's response:\n${text}`;
+    const result = await callClaude(WRITING_GRADE_SYSTEM, userMsg);
+    if (result) renderGradeResult('writing-grade-result', result);
+  } catch (e) {
+    document.getElementById('writing-grade-result').innerHTML = `<div class="grade-result" style="border-color:var(--red)"><p style="color:var(--red);font-size:0.85rem">Error: ${escHtml(e.message)}</p></div>`;
+  }
+}
+
+// Grade from log
+async function gradeEntry(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+
+  const containerId = `grade-${id}`;
+  showLoading(containerId);
+
+  try {
+    let systemPrompt, userMsg;
+    if (entry.type === 'grammar') {
+      systemPrompt = GRAMMAR_GRADE_SYSTEM;
+      const topic = GRAMMAR_TOPICS.find(t => t.title === entry.topic);
+      userMsg = `Grammar Topic: ${entry.topic}\nDescription: ${topic ? topic.desc : ''}\n\nStudent's writing:\n${entry.text}`;
+    } else {
+      systemPrompt = WRITING_GRADE_SYSTEM;
+      const scenario = SCENARIOS.find(s => s.title === entry.scenario);
+      userMsg = `Scenario: ${entry.cat || ''} — ${entry.scenario}\nPrompt: ${scenario ? scenario.prompt : ''}\n\nStudent's response:\n${entry.text}`;
+    }
+    const result = await callClaude(systemPrompt, userMsg);
+    if (result) renderGradeResult(containerId, result);
+  } catch (e) {
+    document.getElementById(containerId).innerHTML = `<div class="grade-result" style="border-color:var(--red)"><p style="color:var(--red);font-size:0.85rem">Error: ${escHtml(e.message)}</p></div>`;
+  }
 }
 
 // --- INIT ---
