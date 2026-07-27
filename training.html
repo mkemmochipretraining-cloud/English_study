@@ -108,22 +108,37 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .streak-dot.done{background:var(--green);color:#fff}
 .streak-dot.today{border:2px solid var(--accent)}
 
-.grade-result{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:10px;margin-bottom:10px}
-.grade-result h4{font-size:0.9rem;font-weight:700;margin-bottom:10px;color:var(--accent)}
-.grade-score{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.grade-score .score-num{font-size:2rem;font-weight:800;line-height:1}
-.grade-score .score-label{font-size:0.75rem;color:var(--text-dim)}
-.grade-section{margin-bottom:10px}
-.grade-section-title{font-size:0.8rem;font-weight:600;color:var(--orange);margin-bottom:4px}
-.grade-section p,.grade-section li{font-size:0.85rem;line-height:1.6;color:var(--text)}
-.grade-section ul{padding-left:16px;margin:0}
-.grade-section li{margin-bottom:4px}
-.grade-section code{background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green);font-size:0.82rem}
-.grade-correction{background:var(--bg);border-left:3px solid var(--green);padding:8px 12px;border-radius:0 8px 8px 0;margin:6px 0;font-size:0.85rem;line-height:1.6}
-.grade-correction .original{color:var(--red);text-decoration:line-through}
-.grade-correction .corrected{color:var(--green)}
-.grade-loading{text-align:center;padding:20px;color:var(--text-dim);font-size:0.85rem}
-.grade-loading .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle}
+.grade-result{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-top:12px;margin-bottom:12px;overflow:hidden}
+.grade-header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:20px;display:flex;align-items:center;gap:20px}
+.grade-ring{position:relative;width:80px;height:80px;flex-shrink:0}
+.grade-ring svg{transform:rotate(-90deg);width:80px;height:80px}
+.grade-ring .ring-bg{fill:none;stroke:var(--border);stroke-width:6}
+.grade-ring .ring-fg{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 0.8s ease}
+.grade-ring .ring-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.grade-ring .ring-score{font-size:1.6rem;font-weight:800;line-height:1}
+.grade-ring .ring-sub{font-size:0.6rem;color:var(--text-dim);margin-top:2px}
+.grade-level{font-size:1.1rem;font-weight:700;margin-bottom:2px}
+.grade-level-desc{font-size:0.78rem;color:var(--text-dim);line-height:1.4}
+.grade-body{padding:16px}
+.grade-section{margin-bottom:16px}
+.grade-section:last-child{margin-bottom:0}
+.grade-section-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.grade-section-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0}
+.grade-section-title{font-size:0.85rem;font-weight:700;margin:0}
+.grade-section-count{font-size:0.7rem;color:var(--text-dim);margin-left:auto;background:var(--surface2);padding:1px 8px;border-radius:10px}
+.grade-correction-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.grade-correction-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;margin-right:6px;flex-shrink:0;vertical-align:middle}
+.grade-correction-original{color:var(--red);background:rgba(248,81,73,0.1);padding:6px 10px;border-radius:6px;margin:8px 0 4px;font-size:0.88rem;line-height:1.5;text-decoration:line-through;text-decoration-color:rgba(248,81,73,0.5)}
+.grade-correction-arrow{text-align:center;color:var(--text-dim);font-size:0.75rem;margin:2px 0}
+.grade-correction-fixed{color:var(--green);background:rgba(63,185,80,0.1);padding:6px 10px;border-radius:6px;margin:4px 0 8px;font-size:0.88rem;line-height:1.5;font-weight:500}
+.grade-correction-why{font-size:0.8rem;color:var(--text-dim);line-height:1.5;padding-left:2px}
+.grade-good-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;font-size:0.85rem;line-height:1.5}
+.grade-good-icon{color:var(--green);flex-shrink:0;font-size:1rem;line-height:1.3}
+.grade-tip-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;font-size:0.85rem;line-height:1.5}
+.grade-tip-icon{color:var(--yellow);flex-shrink:0;font-size:1rem;line-height:1.3}
+.grade-model{background:var(--bg);border:1px solid var(--accent);border-radius:10px;padding:14px;font-size:0.88rem;line-height:1.7;color:var(--text);white-space:pre-wrap}
+.grade-loading{text-align:center;padding:24px;color:var(--text-dim);font-size:0.85rem}
+.grade-loading .spinner{display:inline-block;width:22px;height:22px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:10px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 .btn-grade{background:var(--purple);color:#fff}
 </style>
@@ -718,45 +733,123 @@ async function callClaude(systemPrompt, userMessage) {
 function renderGradeResult(containerId, resultJson) {
   const el = document.getElementById(containerId);
   try {
-    const r = JSON.parse(resultJson);
-    let html = `<div class="grade-result"><h4>Grading Result</h4>`;
-    html += `<div class="grade-score">
-      <div class="score-num" style="color:${r.score >= 80 ? 'var(--green)' : r.score >= 60 ? 'var(--orange)' : 'var(--red)'}">${r.score}</div>
-      <div><div style="font-size:0.9rem;font-weight:600">/100</div><div class="score-label">${r.level || ''}</div></div>
+    // Strip markdown code fences if present
+    let cleaned = resultJson.trim();
+    if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
+    const r = JSON.parse(cleaned);
+
+    const score = r.score || 0;
+    const color = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--orange)' : 'var(--red)';
+    const circumference = 2 * Math.PI * 34;
+    const offset = circumference - (score / 100) * circumference;
+    const corrections = r.corrections || [];
+    const goodPoints = r.good_points || [];
+    const improvements = r.improvements || [];
+
+    let html = `<div class="grade-result">`;
+
+    // --- Header with score ring ---
+    html += `<div class="grade-header">
+      <div class="grade-ring">
+        <svg viewBox="0 0 80 80">
+          <circle class="ring-bg" cx="40" cy="40" r="34"/>
+          <circle class="ring-fg" cx="40" cy="40" r="34"
+            stroke="${color}"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="ring-text">
+          <div class="ring-score" style="color:${color}">${score}</div>
+          <div class="ring-sub">/ 100</div>
+        </div>
+      </div>
+      <div>
+        <div class="grade-level" style="color:${color}">${r.level || ''}</div>
+        <div class="grade-level-desc">${
+          score >= 90 ? 'ほぼ完璧です！' :
+          score >= 80 ? 'とても良くできています。' :
+          score >= 70 ? '良い出来です。あと少し！' :
+          score >= 60 ? '基礎はOK。改善点を確認しよう。' :
+          'しっかり復習して再チャレンジ！'
+        }</div>
+      </div>
     </div>`;
 
-    if (r.corrections && r.corrections.length) {
-      html += `<div class="grade-section"><div class="grade-section-title">Corrections</div>`;
-      r.corrections.forEach(c => {
-        html += `<div class="grade-correction">
-          <span class="original">${escHtml(c.original)}</span> → <span class="corrected">${escHtml(c.corrected)}</span>
-          <div style="font-size:0.78rem;color:var(--text-dim);margin-top:2px">${escHtml(c.explanation)}</div>
+    html += `<div class="grade-body">`;
+
+    // --- Corrections ---
+    if (corrections.length) {
+      html += `<div class="grade-section">
+        <div class="grade-section-bar">
+          <div class="grade-section-icon" style="background:rgba(248,81,73,0.15);color:var(--red)">&#9998;</div>
+          <div class="grade-section-title" style="color:var(--red)">修正箇所</div>
+          <div class="grade-section-count">${corrections.length}件</div>
         </div>`;
+      corrections.forEach((c, i) => {
+        html += `<div class="grade-correction-card">
+          <div><span class="grade-correction-num">${i+1}</span><span style="font-size:0.8rem;font-weight:600;color:var(--text-dim)">Error #${i+1}</span></div>
+          <div class="grade-correction-original">${escHtml(c.original)}</div>
+          <div class="grade-correction-arrow">&#x25BC; 修正後</div>
+          <div class="grade-correction-fixed">${escHtml(c.corrected)}</div>
+          <div class="grade-correction-why">${escHtml(c.explanation)}</div>
+        </div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div class="grade-section">
+        <div class="grade-section-bar">
+          <div class="grade-section-icon" style="background:rgba(63,185,80,0.15);color:var(--green)">&#10003;</div>
+          <div class="grade-section-title" style="color:var(--green)">修正箇所なし</div>
+        </div>
+        <div class="grade-good-item"><span class="grade-good-icon">&#10024;</span><span>文法的な間違いは見つかりませんでした！</span></div>
+      </div>`;
+    }
+
+    // --- Good Points ---
+    if (goodPoints.length) {
+      html += `<div class="grade-section">
+        <div class="grade-section-bar">
+          <div class="grade-section-icon" style="background:rgba(63,185,80,0.15);color:var(--green)">&#10003;</div>
+          <div class="grade-section-title" style="color:var(--green)">良かった点</div>
+        </div>`;
+      goodPoints.forEach(p => {
+        html += `<div class="grade-good-item"><span class="grade-good-icon">&#10004;</span><span>${escHtml(p)}</span></div>`;
       });
       html += `</div>`;
     }
 
-    if (r.good_points && r.good_points.length) {
-      html += `<div class="grade-section"><div class="grade-section-title" style="color:var(--green)">Good Points</div><ul>`;
-      r.good_points.forEach(p => { html += `<li>${escHtml(p)}</li>`; });
-      html += `</ul></div>`;
+    // --- Improvements ---
+    if (improvements.length) {
+      html += `<div class="grade-section">
+        <div class="grade-section-bar">
+          <div class="grade-section-icon" style="background:rgba(210,153,34,0.15);color:var(--yellow)">&#9733;</div>
+          <div class="grade-section-title" style="color:var(--yellow)">改善アドバイス</div>
+        </div>`;
+      improvements.forEach(p => {
+        html += `<div class="grade-tip-item"><span class="grade-tip-icon">&#128161;</span><span>${escHtml(p)}</span></div>`;
+      });
+      html += `</div>`;
     }
 
-    if (r.improvements && r.improvements.length) {
-      html += `<div class="grade-section"><div class="grade-section-title">Tips for Improvement</div><ul>`;
-      r.improvements.forEach(p => { html += `<li>${escHtml(p)}</li>`; });
-      html += `</ul></div>`;
-    }
-
+    // --- Model Answer ---
     if (r.rewrite) {
-      html += `<div class="grade-section"><div class="grade-section-title" style="color:var(--accent)">Model Answer</div>
-        <div class="grade-correction" style="border-left-color:var(--accent)">${escHtml(r.rewrite)}</div></div>`;
+      html += `<div class="grade-section">
+        <div class="grade-section-bar">
+          <div class="grade-section-icon" style="background:rgba(88,166,255,0.15);color:var(--accent)">&#9997;</div>
+          <div class="grade-section-title" style="color:var(--accent)">模範解答</div>
+        </div>
+        <div class="grade-model">${escHtml(r.rewrite)}</div>
+      </div>`;
     }
 
-    html += `</div>`;
+    html += `</div></div>`;
     el.innerHTML = html;
   } catch {
-    el.innerHTML = `<div class="grade-result"><h4>Grading Result</h4><div style="font-size:0.85rem;line-height:1.6;white-space:pre-wrap">${escHtml(resultJson)}</div></div>`;
+    // Fallback: show raw text nicely
+    el.innerHTML = `<div class="grade-result">
+      <div class="grade-header"><div style="font-size:0.9rem;font-weight:600">Grading Result</div></div>
+      <div class="grade-body"><div style="font-size:0.85rem;line-height:1.7;white-space:pre-wrap">${escHtml(resultJson)}</div></div>
+    </div>`;
   }
 }
 
