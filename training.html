@@ -141,6 +141,27 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .grade-loading .spinner{display:inline-block;width:22px;height:22px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:10px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 .btn-grade{background:var(--purple);color:#fff}
+
+/* --- HelloTalk Memo --- */
+.tag-memo{background:#12304a;color:#7ee0ff}
+.memo-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px}
+.memo-item.fav{border-color:var(--yellow)}
+.memo-head{display:flex;align-items:flex-start;gap:8px}
+.memo-en{font-size:1rem;font-weight:700;line-height:1.35;flex:1;word-break:break-word}
+.memo-ja{font-size:0.85rem;color:var(--green);margin:2px 0 6px}
+.memo-ex{font-size:0.82rem;font-style:italic;border-left:2px solid var(--accent);padding-left:8px;margin-bottom:6px;line-height:1.55;white-space:pre-wrap}
+.memo-note{font-size:0.78rem;color:var(--text-dim);line-height:1.55;white-space:pre-wrap}
+.memo-meta{font-size:0.66rem;color:var(--text-dim);margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.memo-actions{display:flex;gap:4px;flex-shrink:0}
+.icon-btn{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:8px;padding:2px 7px;font-size:0.7rem;cursor:pointer;line-height:1.6;font-family:inherit}
+.icon-btn:active{transform:scale(0.94)}
+.icon-btn.on{color:var(--yellow);border-color:var(--yellow)}
+.memo-group{font-size:0.72rem;color:var(--text-dim);font-weight:600;margin:14px 0 6px;letter-spacing:0.04em}
+.memo-group:first-child{margin-top:0}
+.filter-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.filter-row input,.filter-row select{margin-bottom:0}
+.deck-row{display:flex;gap:6px;align-items:center;margin-bottom:10px;font-size:0.75rem;color:var(--text-dim)}
+.deck-row select{margin-bottom:0;width:auto;padding:4px 8px;font-size:0.75rem;border-radius:8px}
 </style>
 </head>
 <body>
@@ -158,7 +179,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
   <div id="p-today" class="panel active">
     <div class="card card-glow">
       <div class="card-title" style="color:var(--orange)">Today's Progress</div>
-      <div class="stats" id="today-stats"></div>
+      <div class="stats" id="today-stats" style="grid-template-columns:repeat(5,1fr)"></div>
     </div>
     <div class="card">
       <div class="card-title">7-Day Streak</div>
@@ -170,8 +191,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
       <button class="btn btn-o btn-full" onclick="switchTab('p-writing')" style="padding:16px 10px">Business Writing</button>
       <button class="btn btn-g btn-full" onclick="switchTab('p-vocab');startVocab()" style="padding:16px 10px">Vocabulary</button>
       <button class="btn btn-ghost btn-full" onclick="switchTab('p-log')" style="padding:16px 10px;color:var(--text)">Review Log</button>
+      <button class="btn btn-full" onclick="switchTab('p-hello');openMemoModal()" style="padding:16px 10px;grid-column:1/-1;background:#12304a;color:#7ee0ff;border:1px solid #1d4b6e">+ HelloTalk Memo</button>
     </div>
-    <div class="section" style="margin-top:16px">Today's Writing</div>
+    <div class="section" style="margin-top:16px">Today's Activity</div>
     <div class="card"><div id="today-entries"></div></div>
   </div>
 
@@ -217,6 +239,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
   <!-- VOCAB -->
   <div id="p-vocab" class="panel">
     <div class="section">Vocabulary <span id="vocab-progress" style="font-size:0.8rem;color:var(--text-dim)"></span></div>
+    <div class="deck-row">
+      Deck
+      <select id="deck-select" onchange="setDeck(this.value)">
+        <option value="all">All (Built-in + Memo)</option>
+        <option value="builtin">Built-in only</option>
+        <option value="memo">HelloTalk Memo only</option>
+      </select>
+      <span id="deck-count" style="margin-left:auto"></span>
+    </div>
     <div class="vocab-card" id="vocab-card" onclick="revealVocab()"></div>
     <div class="vocab-btns">
       <button class="btn btn-d" onclick="markVocab('hard')">Hard</button>
@@ -227,6 +258,38 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
       <div class="card-title">Session Stats</div>
       <div class="stats" id="vocab-stats"></div>
     </div>
+  </div>
+
+  <!-- HELLOTALK MEMO -->
+  <div id="p-hello" class="panel">
+    <div class="section">
+      HelloTalk Memo
+      <button class="btn btn-p btn-sm" onclick="openMemoModal()">+ Add</button>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#7ee0ff">Memo Stats</div>
+      <div class="stats" id="memo-stats"></div>
+    </div>
+    <div class="filter-row">
+      <input id="memo-search" placeholder="Search word / meaning / note..." oninput="renderMemos()">
+      <select id="memo-filter" onchange="renderMemos()" style="width:auto;padding:10px 8px;font-size:0.75rem">
+        <option value="all">All</option>
+        <option value="word">Word</option>
+        <option value="phrase">Phrase</option>
+        <option value="correction">Correction</option>
+        <option value="slang">Slang</option>
+        <option value="fav">&#9733; Starred</option>
+      </select>
+    </div>
+    <div class="card"><div id="memo-list"></div></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="copyMemosMarkdown()">Copy as Markdown</button>
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="downloadMemosMarkdown()">Download .md</button>
+      <button class="btn btn-g btn-sm" style="flex:1" onclick="switchTab('p-vocab');setDeck('memo')">Review as Cards</button>
+    </div>
+    <p style="font-size:0.72rem;color:var(--text-dim);line-height:1.6;margin-bottom:8px">
+      Markdown はリポジトリの <code>vocabulary/words.md</code> / <code>phrases/notes.md</code> にそのまま貼り付けられます。
+    </p>
   </div>
 
   <!-- LOG -->
@@ -258,6 +321,45 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
   </div>
 </div>
 
+<!-- Memo Modal -->
+<div class="modal-bg" id="memo-modal" onclick="if(event.target===this)closeMemoModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="memo-modal-title">New HelloTalk Memo</h3>
+    <label>単語 / フレーズ (English) *</label>
+    <input id="memo-en" placeholder="e.g. That makes sense">
+    <button class="btn btn-grade btn-sm btn-full" style="margin-bottom:6px" onclick="aiFillMemo()">AI で意味・例文・ニュアンスを補完</button>
+    <div id="memo-ai-status" style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px;min-height:1em"></div>
+    <label>意味 (日本語)</label>
+    <input id="memo-ja" placeholder="なるほど / 理にかなっている">
+    <label>例文 / 実際に言われた文</label>
+    <textarea id="memo-example" rows="2" placeholder="Oh, that makes sense. Thanks for explaining."></textarea>
+    <label>メモ (ニュアンス・使う場面)</label>
+    <textarea id="memo-note" rows="2" placeholder="I understand よりカジュアルで自然"></textarea>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1">
+        <label>種類</label>
+        <select id="memo-kind">
+          <option value="word">Word (単語)</option>
+          <option value="phrase">Phrase (フレーズ)</option>
+          <option value="correction">Correction (直された表現)</option>
+          <option value="slang">Slang / Casual</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <label>相手 / 場面</label>
+        <input id="memo-partner" placeholder="Anna (US)">
+      </div>
+    </div>
+    <label>日付</label>
+    <input type="date" id="memo-date">
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-g" style="flex:1" onclick="saveMemo()">Save</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeMemoModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bottom Nav -->
 <nav class="bottom-nav">
   <button class="nav-btn active" data-tab="p-today" onclick="switchTab('p-today')">
@@ -275,6 +377,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
   <button class="nav-btn" data-tab="p-vocab" onclick="switchTab('p-vocab')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>
     Vocab
+  </button>
+  <button class="nav-btn" data-tab="p-hello" onclick="switchTab('p-hello')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM7 9h10v2H7V9zm6 5H7v-2h6v2zm4-6H7V6h10v2z"/></svg>
+    Memo
   </button>
   <button class="nav-btn" data-tab="p-log" onclick="switchTab('p-log')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2z"/></svg>
@@ -451,7 +557,10 @@ const VOCAB_DATA = [
 
 // --- STATE ---
 let entries = load('entries', []);
+let memos = load('memos', []);
 let vocabState = load('vocabState', {});
+let deckMode = load('deckMode', 'all');
+let VOCAB_DECK = [];
 let currentGrammarIdx = load('grammarIdx', 0);
 let currentVocabIdx = 0;
 let vocabSession = {total:0, hard:0, ok:0, easy:0};
@@ -467,6 +576,7 @@ function switchTab(tabId) {
   if (tabId === 'p-grammar') renderGrammar();
   if (tabId === 'p-writing') renderScenarios();
   if (tabId === 'p-vocab') renderVocabCard();
+  if (tabId === 'p-hello') renderMemos();
 }
 
 // --- TODAY ---
@@ -477,11 +587,13 @@ function renderToday() {
   const writingDone = todayEntries.some(e => e.type === 'business');
   const vocabToday = load('vocabToday_' + d, {total:0, hard:0, ok:0, easy:0});
   const vocabDone = vocabToday.total >= 10;
+  const memoToday = memos.filter(m => m.date === d).length;
 
   document.getElementById('today-stats').innerHTML = `
     <div class="stat"><div class="sv" style="color:${grammarDone ? 'var(--green)' : 'var(--text-dim)'}">${grammarDone ? '&#10003;' : '-'}</div><div class="sl">Grammar</div></div>
     <div class="stat"><div class="sv" style="color:${writingDone ? 'var(--green)' : 'var(--text-dim)'}">${writingDone ? '&#10003;' : '-'}</div><div class="sl">Writing</div></div>
     <div class="stat"><div class="sv" style="color:${vocabDone ? 'var(--green)' : 'var(--text-dim)'}">${vocabToday.total}</div><div class="sl">Vocab</div></div>
+    <div class="stat"><div class="sv" style="color:${memoToday ? '#7ee0ff' : 'var(--text-dim)'}">${memoToday}</div><div class="sl">Memo</div></div>
     <div class="stat"><div class="sv">${todayEntries.length}</div><div class="sl">Entries</div></div>
   `;
 
@@ -495,7 +607,7 @@ function renderToday() {
     const date = new Date(now);
     date.setDate(date.getDate() - dayOfWeek + i);
     const ds = date.toISOString().slice(0,10);
-    const done = entries.some(e => e.date === ds);
+    const done = entries.some(e => e.date === ds) || memos.some(m => m.date === ds);
     const isToday = ds === d;
     html += `<div class="streak-dot ${done ? 'done' : ''} ${isToday ? 'today' : ''}">${days[i]}</div>`;
   }
@@ -503,13 +615,20 @@ function renderToday() {
 
   // Today's entries
   const el = document.getElementById('today-entries');
-  if (!todayEntries.length) { el.innerHTML = '<div class="empty">No entries yet. Start practicing!</div>'; return; }
-  el.innerHTML = todayEntries.map(e => `
+  let rows = todayEntries.map(e => `
     <div class="entry-row">
       <div class="entry-date">${e.type === 'grammar' ? e.topic : e.scenario} <span class="tag ${e.type === 'grammar' ? 'tag-grammar' : 'tag-biz'}">${e.type}</span></div>
       <div class="entry-text">${escHtml(e.text).replace(/\n/g,'<br>')}</div>
     </div>
   `).join('');
+  rows += memos.filter(m => m.date === d).map(m => `
+    <div class="entry-row" style="cursor:pointer" onclick="switchTab('p-hello')">
+      <div class="entry-date">HelloTalk <span class="tag tag-memo">memo</span></div>
+      <div class="entry-text"><b>${escHtml(m.en)}</b>${m.ja ? ' &mdash; ' + escHtml(m.ja) : ''}</div>
+    </div>
+  `).join('');
+  if (!rows) { el.innerHTML = '<div class="empty">No entries yet. Start practicing!</div>'; return; }
+  el.innerHTML = rows;
 }
 
 // --- GRAMMAR ---
@@ -577,11 +696,33 @@ function saveWriting() {
 }
 
 // --- VOCAB ---
+function memoCards() {
+  return memos.filter(m => m.en).map(m => ({
+    word: m.en,
+    type: (MEMO_KINDS[m.kind] || MEMO_KINDS.word).label,
+    meaning: m.ja || '(意味未記入)',
+    example: m.example || m.note || '',
+    cat: 'memo', fav: !!m.fav, memoId: m.id
+  }));
+}
+function getDeck() {
+  if (deckMode === 'builtin') return VOCAB_DATA.slice();
+  if (deckMode === 'memo') return memoCards();
+  return VOCAB_DATA.concat(memoCards());
+}
+function setDeck(mode) {
+  deckMode = mode;
+  save('deckMode', mode);
+  const sel = document.getElementById('deck-select');
+  if (sel) sel.value = mode;
+  startVocab();
+}
 function buildVocabQueue() {
+  VOCAB_DECK = getDeck();
   const state = load('vocabState', {});
-  const scored = VOCAB_DATA.map((v, i) => {
+  const scored = VOCAB_DECK.map((v, i) => {
     const s = state[v.word] || {hard:0, ok:0, easy:0, last:0};
-    const weight = 10 + s.hard * 3 - s.easy * 2;
+    const weight = 10 + s.hard * 3 - s.easy * 2 + (v.fav ? 5 : 0) + (v.cat === 'memo' ? 2 : 0);
     return {idx: i, weight: Math.max(1, weight), last: s.last};
   });
   scored.sort((a, b) => b.weight - a.weight || a.last - b.last);
@@ -590,29 +731,42 @@ function buildVocabQueue() {
 }
 function startVocab() {
   vocabSession = {total:0, hard:0, ok:0, easy:0};
+  const sel = document.getElementById('deck-select');
+  if (sel) sel.value = deckMode;
   buildVocabQueue();
   renderVocabCard();
 }
 function renderVocabCard() {
-  if (currentVocabIdx >= vocabQueue.length) { buildVocabQueue(); currentVocabIdx = 0; }
-  const v = VOCAB_DATA[vocabQueue[currentVocabIdx]];
+  if (!vocabQueue.length || currentVocabIdx >= vocabQueue.length) buildVocabQueue();
   const card = document.getElementById('vocab-card');
+  const countEl = document.getElementById('deck-count');
+  if (countEl) countEl.textContent = `${VOCAB_DECK.length} cards`;
+  if (!VOCAB_DECK.length) {
+    card.className = 'vocab-card';
+    card.innerHTML = '<div class="empty">このデッキにはカードがありません。<br>Memo タブで単語・フレーズを記録すると<br>ここでフラッシュカードとして復習できます。</div>';
+    document.getElementById('vocab-progress').textContent = '';
+    renderVocabStats();
+    return;
+  }
+  const v = VOCAB_DECK[vocabQueue[currentVocabIdx]];
   card.className = 'vocab-card';
   card.innerHTML = `
-    <div class="vc-word">${v.word}</div>
-    <div class="vc-type">${v.type} <span class="tag ${v.cat === 'tech' ? 'tag-tech' : v.cat === 'biz' ? 'tag-biz' : 'tag-daily'}">${v.cat}</span></div>
-    <div class="vc-meaning">${v.meaning}</div>
-    <div class="vc-example">"${v.example}"</div>
+    <div class="vc-word">${escHtml(v.word)}</div>
+    <div class="vc-type">${escHtml(v.type)} <span class="tag ${v.cat === 'tech' ? 'tag-tech' : v.cat === 'biz' ? 'tag-biz' : v.cat === 'memo' ? 'tag-memo' : 'tag-daily'}">${v.cat}</span></div>
+    <div class="vc-meaning">${escHtml(v.meaning)}</div>
+    <div class="vc-example">${v.example ? '"' + escHtml(v.example) + '"' : ''}</div>
     <div class="vc-hint">Tap to reveal</div>
   `;
-  document.getElementById('vocab-progress').textContent = `${currentVocabIdx + 1} / ${VOCAB_DATA.length}`;
+  document.getElementById('vocab-progress').textContent = `${currentVocabIdx + 1} / ${VOCAB_DECK.length}`;
   renderVocabStats();
 }
 function revealVocab() {
   document.getElementById('vocab-card').classList.add('revealed');
 }
 function markVocab(level) {
-  const v = VOCAB_DATA[vocabQueue[currentVocabIdx]];
+  if (!VOCAB_DECK.length || !vocabQueue.length) return;
+  const v = VOCAB_DECK[vocabQueue[currentVocabIdx]];
+  if (!v) return;
   const state = load('vocabState', {});
   if (!state[v.word]) state[v.word] = {hard:0, ok:0, easy:0, last:0};
   state[v.word][level]++;
@@ -638,6 +792,220 @@ function renderVocabStats() {
     <div class="stat"><div class="sv" style="color:var(--orange)">${vocabSession.ok}</div><div class="sl">OK</div></div>
     <div class="stat"><div class="sv" style="color:var(--green)">${vocabSession.easy}</div><div class="sl">Easy</div></div>
   `;
+}
+
+// --- HELLOTALK MEMO ---
+const MEMO_KINDS = {
+  word:       {label:'Word',       ja:'単語',     tag:'tag-vocab'},
+  phrase:     {label:'Phrase',     ja:'フレーズ', tag:'tag-daily'},
+  correction: {label:'Correction', ja:'訂正',     tag:'tag-tech'},
+  slang:      {label:'Slang',      ja:'スラング', tag:'tag-biz'},
+};
+let editingMemoId = null;
+
+function openMemoModal(id) {
+  editingMemoId = id || null;
+  const m = id ? memos.find(x => x.id === id) : null;
+  document.getElementById('memo-modal-title').textContent = m ? 'Edit HelloTalk Memo' : 'New HelloTalk Memo';
+  document.getElementById('memo-en').value = m ? m.en : '';
+  document.getElementById('memo-ja').value = m ? (m.ja || '') : '';
+  document.getElementById('memo-example').value = m ? (m.example || '') : '';
+  document.getElementById('memo-note').value = m ? (m.note || '') : '';
+  document.getElementById('memo-partner').value = m ? (m.partner || '') : '';
+  document.getElementById('memo-kind').value = m ? m.kind : 'phrase';
+  document.getElementById('memo-date').value = m ? m.date : today();
+  document.getElementById('memo-ai-status').textContent = '';
+  document.getElementById('memo-modal').classList.add('show');
+  setTimeout(() => document.getElementById('memo-en').focus(), 120);
+}
+function closeMemoModal() {
+  document.getElementById('memo-modal').classList.remove('show');
+  editingMemoId = null;
+}
+function saveMemo() {
+  const en = document.getElementById('memo-en').value.trim();
+  if (!en) { alert('単語・フレーズ (English) を入力してください。'); return; }
+  const data = {
+    en,
+    ja: document.getElementById('memo-ja').value.trim(),
+    example: document.getElementById('memo-example').value.trim(),
+    note: document.getElementById('memo-note').value.trim(),
+    partner: document.getElementById('memo-partner').value.trim(),
+    kind: document.getElementById('memo-kind').value,
+    date: document.getElementById('memo-date').value || today(),
+  };
+  if (editingMemoId) {
+    const m = memos.find(x => x.id === editingMemoId);
+    if (m) Object.assign(m, data);
+  } else {
+    memos.push(Object.assign({id: 'm' + Date.now().toString(36), fav: false, createdAt: Date.now()}, data));
+  }
+  save('memos', memos);
+  closeMemoModal();
+  renderMemos();
+  renderToday();
+}
+function deleteMemo(id) {
+  if (!confirm('このメモを削除しますか？')) return;
+  memos = memos.filter(m => m.id !== id);
+  save('memos', memos);
+  renderMemos();
+  renderToday();
+}
+function toggleMemoFav(id) {
+  const m = memos.find(x => x.id === id);
+  if (!m) return;
+  m.fav = !m.fav;
+  save('memos', memos);
+  renderMemos();
+}
+function filteredMemos() {
+  const qEl = document.getElementById('memo-search');
+  const fEl = document.getElementById('memo-filter');
+  const q = (qEl ? qEl.value : '').toLowerCase().trim();
+  const f = fEl ? fEl.value : 'all';
+  let list = memos.slice();
+  if (f === 'fav') list = list.filter(m => m.fav);
+  else if (f !== 'all') list = list.filter(m => m.kind === f);
+  if (q) list = list.filter(m => [m.en, m.ja, m.example, m.note, m.partner].join(' ').toLowerCase().includes(q));
+  return list.sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
+}
+function renderMemoStats() {
+  const d = today();
+  const w = new Date(); w.setDate(w.getDate() - 6);
+  const ws = w.toISOString().slice(0,10);
+  document.getElementById('memo-stats').innerHTML = `
+    <div class="stat"><div class="sv">${memos.length}</div><div class="sl">Total</div></div>
+    <div class="stat"><div class="sv" style="color:var(--accent)">${memos.filter(m => m.date === d).length}</div><div class="sl">Today</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green)">${memos.filter(m => m.date >= ws).length}</div><div class="sl">7 days</div></div>
+    <div class="stat"><div class="sv" style="color:var(--yellow)">${memos.filter(m => m.fav).length}</div><div class="sl">Starred</div></div>
+  `;
+}
+function renderMemos() {
+  renderMemoStats();
+  const list = filteredMemos();
+  const el = document.getElementById('memo-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">' + (memos.length
+      ? '該当するメモがありません'
+      : 'まだメモがありません。<br>HelloTalk で教えてもらった単語・フレーズを<br>「+ Add」から記録しましょう。') + '</div>';
+    return;
+  }
+  let html = '', lastDate = '';
+  list.forEach(m => {
+    if (m.date !== lastDate) { html += `<div class="memo-group">${m.date}</div>`; lastDate = m.date; }
+    const k = MEMO_KINDS[m.kind] || MEMO_KINDS.word;
+    html += `
+    <div class="memo-item ${m.fav ? 'fav' : ''}">
+      <div class="memo-head">
+        <div class="memo-en">${escHtml(m.en)}</div>
+        <div class="memo-actions">
+          <button class="icon-btn ${m.fav ? 'on' : ''}" onclick="toggleMemoFav('${m.id}')">&#9733;</button>
+          <button class="icon-btn" onclick="openMemoModal('${m.id}')">Edit</button>
+          <button class="icon-btn" onclick="deleteMemo('${m.id}')">Del</button>
+        </div>
+      </div>
+      ${m.ja ? `<div class="memo-ja">${escHtml(m.ja)}</div>` : ''}
+      ${m.example ? `<div class="memo-ex">${escHtml(m.example)}</div>` : ''}
+      ${m.note ? `<div class="memo-note">${escHtml(m.note)}</div>` : ''}
+      <div class="memo-meta">
+        <span class="tag ${k.tag}">${k.label}</span>
+        ${m.partner ? `<span>@ ${escHtml(m.partner)}</span>` : ''}
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+// --- MEMO -> MARKDOWN ---
+function memoToMarkdown(m) {
+  const k = MEMO_KINDS[m.kind] || MEMO_KINDS.word;
+  let out = `### ${m.en}\n`;
+  out += `- **意味**: ${m.ja || ''}\n`;
+  if (m.kind === 'phrase' || m.kind === 'slang') {
+    out += `- **場面**: ${m.partner ? 'HelloTalk / ' + m.partner : 'HelloTalk'}\n`;
+  }
+  out += `- **例文**: ${m.example || ''}\n`;
+  out += `- **メモ**: ${m.note || ''}\n`;
+  out += `- **記録**: ${m.date} (HelloTalk / ${k.ja}${m.partner ? ' / ' + m.partner : ''})\n`;
+  return out;
+}
+function memosMarkdown() {
+  const list = filteredMemos();
+  if (!list.length) return '';
+  const groups = {word:[], phrase:[], correction:[], slang:[]};
+  list.forEach(m => (groups[m.kind] || groups.word).push(m));
+  let out = `# HelloTalk Log (exported ${today()})\n\nHelloTalk で教えてもらった単語・フレーズの記録。\n`;
+  Object.keys(groups).forEach(k => {
+    if (!groups[k].length) return;
+    out += `\n## ${MEMO_KINDS[k].label} (${MEMO_KINDS[k].ja})\n\n`;
+    out += groups[k].map(memoToMarkdown).join('\n');
+  });
+  return out;
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); alert('Markdown をコピーしました。'); }
+  catch { prompt('コピーしてください:', text); }
+  document.body.removeChild(ta);
+}
+function copyMemosMarkdown() {
+  const md = memosMarkdown();
+  if (!md) { alert('出力するメモがありません。'); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(md).then(() => alert('Markdown をコピーしました。'), () => fallbackCopy(md));
+  } else fallbackCopy(md);
+}
+function downloadMemosMarkdown() {
+  const md = memosMarkdown();
+  if (!md) { alert('出力するメモがありません。'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([md], {type:'text/markdown'}));
+  a.download = `hellotalk_memo_${today()}.md`;
+  a.click();
+}
+
+// --- MEMO AI ASSIST ---
+const MEMO_AI_SYSTEM = `You are an English tutor for a Japanese learner (TOEIC 660, a semiconductor / chip design engineer) who records words and phrases learned on HelloTalk.
+Given an English word or phrase and any context the learner already wrote, respond with JSON ONLY (no markdown fences):
+{
+  "en": "<the word or phrase, spelling/casing corrected>",
+  "ja": "<concise Japanese meaning, 30 chars or less>",
+  "example": "<one short natural English example sentence>",
+  "note": "<Japanese note: nuance, formality, similar expressions, typical Japanese-learner mistakes. 1-2 sentences>",
+  "kind": "word" or "phrase" or "correction" or "slang"
+}
+If the learner already wrote a meaning or example, keep their intent and just polish it.`;
+
+async function aiFillMemo() {
+  const en = document.getElementById('memo-en').value.trim();
+  const st = document.getElementById('memo-ai-status');
+  if (!en) { st.textContent = '先に単語・フレーズを入力してください。'; return; }
+  st.textContent = 'AI が補完中...';
+  try {
+    const ja = document.getElementById('memo-ja').value.trim();
+    const ex = document.getElementById('memo-example').value.trim();
+    const note = document.getElementById('memo-note').value.trim();
+    let msg = `Word/phrase: ${en}`;
+    if (ja) msg += `\nLearner's meaning (JA): ${ja}`;
+    if (ex) msg += `\nContext / sentence heard: ${ex}`;
+    if (note) msg += `\nLearner's note: ${note}`;
+    const result = await callClaude(MEMO_AI_SYSTEM, msg);
+    if (!result) { st.textContent = ''; return; }
+    let c = result.trim();
+    if (c.startsWith('```')) c = c.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+    const r = JSON.parse(c);
+    if (r.en) document.getElementById('memo-en').value = r.en;
+    if (r.ja) document.getElementById('memo-ja').value = r.ja;
+    if (r.example) document.getElementById('memo-example').value = r.example;
+    if (r.note) document.getElementById('memo-note').value = r.note;
+    if (r.kind && MEMO_KINDS[r.kind]) document.getElementById('memo-kind').value = r.kind;
+    st.innerHTML = '<span style="color:var(--green)">AI が補完しました。内容を確認して Save してください。</span>';
+  } catch (e) {
+    st.innerHTML = '<span style="color:var(--red)">Error: ' + escHtml(e.message) + '</span>';
+  }
 }
 
 // --- LOG ---
@@ -673,7 +1041,7 @@ document.addEventListener('input', e => {
 
 // --- EXPORT/IMPORT ---
 function exportData() {
-  const d = {entries, vocabState: load('vocabState',{}), grammarIdx: currentGrammarIdx, exportedAt: new Date().toISOString()};
+  const d = {entries, memos, vocabState: load('vocabState',{}), grammarIdx: currentGrammarIdx, exportedAt: new Date().toISOString()};
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(d,null,2)], {type:'application/json'}));
   a.download = `english_backup_${today()}.json`; a.click();
@@ -683,6 +1051,7 @@ function importData() {
   input.onchange = e => { const r = new FileReader(); r.onload = ev => { try {
     const d = JSON.parse(ev.target.result);
     if (d.entries) { entries = d.entries; save('entries', entries); }
+    if (d.memos) { memos = d.memos; save('memos', memos); }
     if (d.vocabState) save('vocabState', d.vocabState);
     if (d.grammarIdx != null) { currentGrammarIdx = d.grammarIdx; save('grammarIdx', currentGrammarIdx); }
     renderToday();
@@ -951,7 +1320,11 @@ async function gradeEntry(id) {
 }
 
 // --- INIT ---
-renderToday();
+(function init() {
+  const sel = document.getElementById('deck-select');
+  if (sel) sel.value = deckMode;
+  renderToday();
+})();
 </script>
 </body>
 </html>
