@@ -651,6 +651,7 @@ function switchTab(tabId) {
   if (tabId === 'p-vocab') renderVocabCard();
   if (tabId === 'p-hello') renderMemos();
   if (tabId === 'p-quiz') renderQuiz();
+  if (['p-grammar', 'p-writing', 'p-hello', 'p-log'].includes(tabId)) warmOllama();
   window.scrollTo(0, 0);
 }
 
@@ -1770,6 +1771,17 @@ function importData() {
 const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
 const OLLAMA_TIMEOUT_MS = 300000;   // local 14B models can be slow
 
+// This host has OLLAMA_KEEP_ALIVE=0 set machine-wide, which unloads the model
+// after every request -- a ~12s reload on each grading. A per-request
+// keep_alive overrides the server default, so we set it here rather than
+// touching the machine environment (other projects share this Ollama).
+const OLLAMA_KEEP_ALIVE = '30m';
+
+// Ollama keys the loaded runner by its load-time options (num_ctx above all).
+// Warmup and the real request MUST send the same object, otherwise the warmed
+// runner is discarded and the model is loaded a second time.
+const OLLAMA_OPTIONS = {temperature: 0.3, num_ctx: 8192};
+
 function aiProvider()  { return load('aiProvider', 'ollama'); }
 function ollamaUrl()   { return (load('ollamaUrl', OLLAMA_DEFAULT_URL) || OLLAMA_DEFAULT_URL).replace(/\/+$/, ''); }
 function ollamaModel() { return load('ollamaModel', ''); }
@@ -1866,6 +1878,8 @@ function saveAiSettings() {
   save('apiKey', document.getElementById('apikey-input').value.trim());
   document.getElementById('apikey-modal').classList.remove('show');
   updateAiBadge();
+  ollamaWarmed = '';
+  warmOllama();
   alert(p === 'ollama'
     ? (model ? `ローカル AI (${model}) を使用します。` : 'モデルが選択されていません。接続テストを実行してモデルを選んでください。')
     : 'Claude API を使用します。');
@@ -1901,11 +1915,12 @@ async function callOllama(systemPrompt, userMessage, schema) {
     model,
     stream: false,
     think: false,               // reasoning off: we only want the JSON
+    keep_alive: OLLAMA_KEEP_ALIVE,
     messages: [
       {role: 'system', content: systemPrompt},
       {role: 'user', content: userMessage},
     ],
-    options: {temperature: 0.3, num_ctx: 8192},
+    options: OLLAMA_OPTIONS,
   };
   if (schema) body.format = schema;   // Ollama structured output
 
@@ -1939,6 +1954,26 @@ async function callOllama(systemPrompt, userMessage, schema) {
   const text = stripThink(data.message && data.message.content);
   if (!text) throw new Error('ローカル AI から空の応答が返りました。モデルを変えるか、もう一度試してください。');
   return text;
+}
+
+// Load the model into VRAM ahead of time so the first grading of a session
+// does not pay the load cost. Empty `messages` makes Ollama load and stop.
+// Fire-and-forget: failures are silent, this is only an optimisation.
+let ollamaWarmed = '';
+function warmOllama() {
+  if (aiProvider() !== 'ollama') return;
+  const model = ollamaModel();
+  if (!model || ollamaWarmed === model) return;
+  ollamaWarmed = model;
+  fetch(ollamaUrl() + '/api/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model, messages: [],
+      keep_alive: OLLAMA_KEEP_ALIVE,
+      options: OLLAMA_OPTIONS,
+    }),
+  }).catch(() => { ollamaWarmed = ''; });
 }
 
 // Dispatch to the configured provider. `schema` is used by Ollama only.
