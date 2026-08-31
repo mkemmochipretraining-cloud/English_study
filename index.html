@@ -219,6 +219,13 @@ textarea.answer-area{min-height:64px;font-size:0.9rem;margin-bottom:0}
 .score-display.perfect{background:rgba(63,185,80,0.12);color:var(--green)}
 .score-display.good{background:rgba(88,166,255,0.12);color:var(--accent)}
 .score-display.needs-work{background:rgba(248,81,73,0.12);color:var(--red)}
+
+/* --- AI SETTINGS --- */
+.ai-hint{font-size:0.72rem;line-height:1.7;color:var(--text-dim)}
+.ai-hint code{display:block;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;margin:4px 0;font-size:0.68rem;word-break:break-all;color:var(--text)}
+.ai-row{display:flex;gap:8px;align-items:center}
+.ai-row .btn{width:auto;white-space:nowrap;margin:0}
+.ai-row select{flex:1;margin:0}
 </style>
 </head>
 <body>
@@ -226,7 +233,7 @@ textarea.answer-area{min-height:64px;font-size:0.9rem;margin-bottom:0}
   <div class="header">
     <h1><b>English</b> Study</h1>
     <div class="header-actions">
-      <button class="btn btn-ghost btn-sm" onclick="showApiKeyModal()">API Key</button>
+      <button class="btn btn-ghost btn-sm" id="ai-btn" onclick="showApiKeyModal()">AI</button>
       <button class="btn btn-ghost btn-sm" onclick="exportData()">Export</button>
       <button class="btn btn-ghost btn-sm" onclick="importData()">Import</button>
     </div>
@@ -376,16 +383,37 @@ textarea.answer-area{min-height:64px;font-size:0.9rem;margin-bottom:0}
   </div>
 </div>
 
-<!-- API Key Modal -->
+<!-- AI Settings Modal -->
 <div class="modal-bg" id="apikey-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>Claude API Key Settings</h3>
-    <label>API Key (sk-ant-...)</label>
-    <input type="password" id="apikey-input" placeholder="sk-ant-api03-...">
-    <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:12px">API Key is stored locally in your browser only. It is sent directly to Anthropic's API and nowhere else.</p>
+    <h3>AI エンジン設定</h3>
+
+    <label>採点・解説に使う AI</label>
+    <select id="ai-provider" onchange="onProviderChange()">
+      <option value="ollama">ローカル AI (Ollama)</option>
+      <option value="claude">Claude API (クラウド)</option>
+    </select>
+
+    <div id="ai-ollama-fields">
+      <label>エンドポイント</label>
+      <input id="ollama-url" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false">
+      <label>モデル</label>
+      <div class="ai-row" style="margin-bottom:10px">
+        <select id="ollama-model"><option value="">-- 接続テストで取得 --</option></select>
+        <button class="btn btn-ghost btn-sm" onclick="testOllama()">接続テスト</button>
+      </div>
+      <div id="ollama-status" class="ai-hint" style="margin-bottom:12px"></div>
+    </div>
+
+    <div id="ai-claude-fields">
+      <label>API Key (sk-ant-...)</label>
+      <input type="password" id="apikey-input" placeholder="sk-ant-api03-...">
+      <p class="ai-hint" style="margin-bottom:12px">API Key はブラウザ内にのみ保存され、Anthropic の API 以外には送信されません。</p>
+    </div>
+
     <div style="display:flex;gap:8px">
-      <button class="btn btn-p" style="flex:1" onclick="saveApiKey()">Save</button>
+      <button class="btn btn-p" style="flex:1" onclick="saveAiSettings()">Save</button>
       <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('apikey-modal').classList.remove('show')">Cancel</button>
     </div>
   </div>
@@ -1017,6 +1045,18 @@ function downloadMemosMarkdown() {
 }
 
 // --- MEMO AI ASSIST ---
+const MEMO_AI_SCHEMA = {
+  type: 'object',
+  properties: {
+    en: {type: 'string'},
+    ja: {type: 'string'},
+    example: {type: 'string'},
+    note: {type: 'string'},
+    kind: {type: 'string', enum: ['word', 'phrase', 'correction', 'slang']},
+  },
+  required: ['en', 'ja', 'example', 'note', 'kind'],
+};
+
 const MEMO_AI_SYSTEM = `You are an English tutor for a Japanese learner (TOEIC 660, a semiconductor / chip design engineer) who records words and phrases learned on HelloTalk.
 Given an English word or phrase and any context the learner already wrote, respond with JSON ONLY (no markdown fences):
 {
@@ -1032,7 +1072,7 @@ async function aiFillMemo() {
   const en = document.getElementById('memo-en').value.trim();
   const st = document.getElementById('memo-ai-status');
   if (!en) { st.textContent = '先に単語・フレーズを入力してください。'; return; }
-  st.textContent = 'AI が補完中...';
+  st.textContent = `${aiLabel()} が補完中...`;
   try {
     const ja = document.getElementById('memo-ja').value.trim();
     const ex = document.getElementById('memo-example').value.trim();
@@ -1041,11 +1081,10 @@ async function aiFillMemo() {
     if (ja) msg += `\nLearner's meaning (JA): ${ja}`;
     if (ex) msg += `\nContext / sentence heard: ${ex}`;
     if (note) msg += `\nLearner's note: ${note}`;
-    const result = await callClaude(MEMO_AI_SYSTEM, msg);
+    const result = await callAI(MEMO_AI_SYSTEM, msg, MEMO_AI_SCHEMA);
     if (!result) { st.textContent = ''; return; }
-    let c = result.trim();
-    if (c.startsWith('```')) c = c.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
-    const r = JSON.parse(c);
+    const r = parseJsonLoose(result);
+    if (!r) throw new Error('AI の応答を解釈できませんでした。');
     if (r.en) document.getElementById('memo-en').value = r.en;
     if (r.ja) document.getElementById('memo-ja').value = r.ja;
     if (r.example) document.getElementById('memo-example').value = r.example;
@@ -1727,19 +1766,188 @@ function importData() {
   } catch { alert('Invalid file'); } }; r.readAsText(e.target.files[0]); }; input.click();
 }
 
-// --- API KEY ---
-function showApiKeyModal() {
-  document.getElementById('apikey-input').value = load('apiKey', '');
-  document.getElementById('apikey-modal').classList.add('show');
+// --- AI PROVIDER SETTINGS ---
+const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
+const OLLAMA_TIMEOUT_MS = 300000;   // local 14B models can be slow
+
+function aiProvider()  { return load('aiProvider', 'ollama'); }
+function ollamaUrl()   { return (load('ollamaUrl', OLLAMA_DEFAULT_URL) || OLLAMA_DEFAULT_URL).replace(/\/+$/, ''); }
+function ollamaModel() { return load('ollamaModel', ''); }
+function aiLabel()     { return aiProvider() === 'ollama' ? (ollamaModel() || 'Local AI') : 'Claude AI'; }
+
+function updateAiBadge() {
+  const b = document.getElementById('ai-btn');
+  if (b) b.textContent = aiProvider() === 'ollama' ? 'AI: Local' : 'AI: Claude';
 }
-function saveApiKey() {
-  const key = document.getElementById('apikey-input').value.trim();
-  save('apiKey', key);
+
+function showApiKeyModal() {
+  document.getElementById('ai-provider').value = aiProvider();
+  document.getElementById('ollama-url').value = load('ollamaUrl', OLLAMA_DEFAULT_URL);
+  document.getElementById('apikey-input').value = load('apiKey', '');
+  document.getElementById('ollama-status').innerHTML = '';
+  setModelOptions(ollamaModel() ? [ollamaModel()] : [], ollamaModel());
+  onProviderChange();
+  document.getElementById('apikey-modal').classList.add('show');
+  if (aiProvider() === 'ollama') testOllama();
+}
+
+function onProviderChange() {
+  const p = document.getElementById('ai-provider').value;
+  document.getElementById('ai-ollama-fields').style.display = p === 'ollama' ? '' : 'none';
+  document.getElementById('ai-claude-fields').style.display = p === 'claude' ? '' : 'none';
+}
+
+function setModelOptions(models, selected) {
+  const sel = document.getElementById('ollama-model');
+  sel.innerHTML = '';
+  if (!models.length) { sel.innerHTML = '<option value="">-- 接続テストでモデルを取得 --</option>'; return; }
+  for (const m of models) {
+    const o = document.createElement('option');
+    o.value = m; o.textContent = m;
+    sel.appendChild(o);
+  }
+  if (selected && models.includes(selected)) sel.value = selected;
+}
+
+async function fetchWithTimeout(url, opts, ms) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await fetch(url, Object.assign({}, opts, {signal: ctl.signal}));
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error(`タイムアウト (${Math.round(ms / 1000)}秒)`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function ollamaHintHtml() {
+  const local = ['localhost', '127.0.0.1', ''].includes(location.hostname) || location.protocol === 'file:';
+  let h = '確認してください:<br>&bull; PC で Ollama が起動しているか (<b>ollama serve</b>)<br>';
+  if (!local) {
+    h += `&bull; このページは <b>${escHtml(location.origin)}</b> から開かれています。Ollama 側で CORS 許可が必要です。PowerShell で:`;
+    h += `<code>setx OLLAMA_ORIGINS "${escHtml(location.origin)},http://localhost:*,http://127.0.0.1:*"</code>`;
+    h += '設定後、Ollama を再起動してください。<br>';
+    h += '&bull; Chrome が「ローカルネットワークへのアクセス」を尋ねたら許可してください。<br>';
+    h += '&bull; それでも繋がらない場合は、このページをローカル (http://localhost:8000/index.html) から開くのが確実です。';
+  }
+  return h;
+}
+
+async function testOllama() {
+  const st = document.getElementById('ollama-status');
+  const url = (document.getElementById('ollama-url').value.trim() || OLLAMA_DEFAULT_URL).replace(/\/+$/, '');
+  st.innerHTML = '<span style="color:var(--text-dim)">接続中...</span>';
+  try {
+    const res = await fetchWithTimeout(url + '/api/tags', {}, 8000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const models = (data.models || []).filter(m => {
+      const c = m.capabilities || [];
+      return !c.length || c.includes('completion');
+    }).map(m => m.name);
+    setModelOptions(models, ollamaModel());
+    st.innerHTML = models.length
+      ? `<span style="color:var(--green)">&#10003; 接続 OK — 利用可能なモデル ${models.length} 件</span>`
+      : '<span style="color:var(--yellow)">接続できましたが、チャット可能なモデルがありません (例: ollama pull qwen3:8b)</span>';
+  } catch (e) {
+    setModelOptions(ollamaModel() ? [ollamaModel()] : [], ollamaModel());
+    st.innerHTML = `<span style="color:var(--red)">&#10005; 接続できません (${escHtml(e.message)})</span><br>` + ollamaHintHtml();
+  }
+}
+
+function saveAiSettings() {
+  const p = document.getElementById('ai-provider').value;
+  const model = document.getElementById('ollama-model').value;
+  save('aiProvider', p);
+  save('ollamaUrl', document.getElementById('ollama-url').value.trim() || OLLAMA_DEFAULT_URL);
+  save('ollamaModel', model);
+  save('apiKey', document.getElementById('apikey-input').value.trim());
   document.getElementById('apikey-modal').classList.remove('show');
-  alert(key ? 'API Key saved.' : 'API Key cleared.');
+  updateAiBadge();
+  alert(p === 'ollama'
+    ? (model ? `ローカル AI (${model}) を使用します。` : 'モデルが選択されていません。接続テストを実行してモデルを選んでください。')
+    : 'Claude API を使用します。');
 }
 
 // --- AUTO GRADING ---
+// Strip <think>...</think> blocks emitted by reasoning models (qwen3 etc.)
+function stripThink(s) {
+  let t = String(s == null ? '' : s).replace(/<think>[\s\S]*?<\/think>/gi, '');
+  const i = t.lastIndexOf('</think>');
+  if (i !== -1) t = t.slice(i + 8);
+  return t.trim();
+}
+
+function parseJsonLoose(s) {
+  let c = stripThink(s);
+  if (c.startsWith('```')) c = c.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+  try { return JSON.parse(c); } catch {}
+  const m = c.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch {} }
+  return null;
+}
+
+async function callOllama(systemPrompt, userMessage, schema) {
+  const url = ollamaUrl();
+  const model = ollamaModel();
+  if (!model) {
+    alert('ローカル AI のモデルが選択されていません。ヘッダーの「AI」ボタンから設定してください。');
+    return null;
+  }
+
+  const body = {
+    model,
+    stream: false,
+    think: false,               // reasoning off: we only want the JSON
+    messages: [
+      {role: 'system', content: systemPrompt},
+      {role: 'user', content: userMessage},
+    ],
+    options: {temperature: 0.3, num_ctx: 8192},
+  };
+  if (schema) body.format = schema;   // Ollama structured output
+
+  const post = b => fetchWithTimeout(url + '/api/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(b),
+  }, OLLAMA_TIMEOUT_MS);
+
+  let res;
+  try {
+    res = await post(body);
+  } catch (e) {
+    throw new Error(`Ollama (${url}) に接続できませんでした: ${e.message} — 設定画面の「接続テスト」で原因を確認してください。`);
+  }
+
+  // Models without thinking support reject the `think` field
+  if (res.status === 400) {
+    const txt = await res.text();
+    if (/think/i.test(txt)) {
+      const retry = Object.assign({}, body);
+      delete retry.think;
+      res = await post(retry);
+    } else {
+      throw new Error(`Ollama Error (400): ${txt}`);
+    }
+  }
+  if (!res.ok) throw new Error(`Ollama Error (${res.status}): ${await res.text()}`);
+
+  const data = await res.json();
+  const text = stripThink(data.message && data.message.content);
+  if (!text) throw new Error('ローカル AI から空の応答が返りました。モデルを変えるか、もう一度試してください。');
+  return text;
+}
+
+// Dispatch to the configured provider. `schema` is used by Ollama only.
+async function callAI(systemPrompt, userMessage, schema) {
+  return aiProvider() === 'ollama'
+    ? callOllama(systemPrompt, userMessage, schema)
+    : callClaude(systemPrompt, userMessage);
+}
+
 async function callClaude(systemPrompt, userMessage) {
   const apiKey = load('apiKey', '');
   if (!apiKey) { alert('API Key が設定されていません。ヘッダーの「API Key」ボタンから設定してください。'); return null; }
@@ -1771,10 +1979,8 @@ async function callClaude(systemPrompt, userMessage) {
 function renderGradeResult(containerId, resultJson) {
   const el = document.getElementById(containerId);
   try {
-    // Strip markdown code fences if present
-    let cleaned = resultJson.trim();
-    if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
-    const r = JSON.parse(cleaned);
+    const r = parseJsonLoose(resultJson);
+    if (!r) throw new Error('JSON parse failed');
 
     const score = r.score || 0;
     const color = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--orange)' : 'var(--red)';
@@ -1892,8 +2098,34 @@ function renderGradeResult(containerId, resultJson) {
 }
 
 function showLoading(containerId) {
-  document.getElementById(containerId).innerHTML = `<div class="grade-loading"><span class="spinner"></span>Grading with Claude AI...</div>`;
+  document.getElementById(containerId).innerHTML = `<div class="grade-loading"><span class="spinner"></span>${escHtml(aiLabel())} が採点中...</div>`;
 }
+
+// JSON Schema handed to Ollama's `format` so small local models
+// cannot drift from the shape renderGradeResult() expects.
+const GRADE_SCHEMA = {
+  type: 'object',
+  properties: {
+    score: {type: 'integer', minimum: 0, maximum: 100},
+    level: {type: 'string'},
+    corrections: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          original: {type: 'string'},
+          corrected: {type: 'string'},
+          explanation: {type: 'string'},
+        },
+        required: ['original', 'corrected', 'explanation'],
+      },
+    },
+    good_points: {type: 'array', items: {type: 'string'}},
+    improvements: {type: 'array', items: {type: 'string'}},
+    rewrite: {type: 'string'},
+  },
+  required: ['score', 'level', 'corrections', 'good_points', 'improvements', 'rewrite'],
+};
 
 const GRAMMAR_GRADE_SYSTEM = `You are an English teacher grading a Japanese engineer's grammar writing practice.
 The student was given a grammar topic and asked to write 5 sentences using that grammar pattern.
@@ -1936,7 +2168,7 @@ async function saveAndGradeGrammar() {
   showLoading('grammar-grade-result');
   try {
     const userMsg = `Grammar Topic: ${t.title}\nDescription: ${t.desc}\n\nStudent's writing:\n${text}`;
-    const result = await callClaude(GRAMMAR_GRADE_SYSTEM, userMsg);
+    const result = await callAI(GRAMMAR_GRADE_SYSTEM, userMsg, GRADE_SCHEMA);
     if (result) renderGradeResult('grammar-grade-result', result);
   } catch (e) {
     document.getElementById('grammar-grade-result').innerHTML = `<div class="grade-result" style="border-color:var(--red)"><p style="color:var(--red);font-size:0.85rem">Error: ${escHtml(e.message)}</p></div>`;
@@ -1955,7 +2187,7 @@ async function saveAndGradeWriting() {
   showLoading('writing-grade-result');
   try {
     const userMsg = `Scenario: ${currentScenario.cat} — ${currentScenario.title}\nPrompt: ${currentScenario.prompt}\n\nStudent's response:\n${text}`;
-    const result = await callClaude(WRITING_GRADE_SYSTEM, userMsg);
+    const result = await callAI(WRITING_GRADE_SYSTEM, userMsg, GRADE_SCHEMA);
     if (result) renderGradeResult('writing-grade-result', result);
   } catch (e) {
     document.getElementById('writing-grade-result').innerHTML = `<div class="grade-result" style="border-color:var(--red)"><p style="color:var(--red);font-size:0.85rem">Error: ${escHtml(e.message)}</p></div>`;
@@ -1981,7 +2213,7 @@ async function gradeEntry(id) {
       const scenario = SCENARIOS.find(s => s.title === entry.scenario);
       userMsg = `Scenario: ${entry.cat || ''} — ${entry.scenario}\nPrompt: ${scenario ? scenario.prompt : ''}\n\nStudent's response:\n${entry.text}`;
     }
-    const result = await callClaude(systemPrompt, userMsg);
+    const result = await callAI(systemPrompt, userMsg, GRADE_SCHEMA);
     if (result) renderGradeResult(containerId, result);
   } catch (e) {
     document.getElementById(containerId).innerHTML = `<div class="grade-result" style="border-color:var(--red)"><p style="color:var(--red);font-size:0.85rem">Error: ${escHtml(e.message)}</p></div>`;
@@ -1994,6 +2226,7 @@ async function gradeEntry(id) {
   buildPanelHeads();
   const sel = document.getElementById('deck-select');
   if (sel) sel.value = deckMode;
+  updateAiBadge();
   switchTab('p-home');
 })();
 </script>
